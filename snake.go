@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/gosuri/uilive"
+	"github.com/olekukonko/tablewriter"
 )
 
 // Field represents game field
@@ -36,27 +36,29 @@ func (f *Field) fillBlocks() {
 }
 
 func (f *Field) render(writer *uilive.Writer) {
-	output := ""
+	table := tablewriter.NewWriter(writer)
+	table.SetBorder(false)
+
 	for _, row := range f.blocks {
-		for _, cell := range row {
+		strRow := make([]string, 10)
+		for index, cell := range row {
 			switch cell {
 			case -1:
-				output += "X"
+				strRow[index] = "X"
 			case 0:
-				output += " "
+				strRow[index] = " "
 			case 1:
-				output += "▆"
+				strRow[index] = "▆"
 			case 2:
-				output += "Ѽ"
+				strRow[index] = "Ѽ"
 			default:
-				output += " "
+				strRow[index] = " "
 			}
-			output += "\t"
 		}
-		output += "\n"
+		table.Append(strRow)
 	}
 
-	fmt.Fprintf(writer, output+"\n")
+	table.Render()
 }
 
 func makeTurn(field *Field, writer *uilive.Writer) {

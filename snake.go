@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gosuri/uilive"
+	termbox "github.com/nsf/termbox-go"
 )
 
 // Direction is an ENUM for show snake direction
@@ -124,7 +125,30 @@ func makeTurn() {
 	makeTurn()
 }
 
+func snakeControl() {
+	event := termbox.PollEvent()
+
+	switch event.Ch {
+	case 97:
+		snake.direction = LEFT
+	case 119:
+		snake.direction = UP
+	case 100:
+		snake.direction = RIGHT
+	case 115:
+		snake.direction = DOWN
+	}
+
+	snakeControl()
+}
+
 func main() {
+	err := termbox.Init()
+	if err != nil {
+		panic(err)
+	}
+	defer termbox.Close()
+
 	writer.Start()
 	defer writer.Stop()
 
@@ -138,5 +162,6 @@ func main() {
 	snake.body = make([]Coordinate, 1, 100)
 	snake.body[0] = Coordinate{2, 3}
 
+	go snakeControl()
 	makeTurn()
 }

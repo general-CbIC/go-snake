@@ -1,10 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gosuri/uilive"
-	"github.com/olekukonko/tablewriter"
 )
 
 // Direction is an ENUM for show snake direction
@@ -41,6 +41,11 @@ type Snake struct {
 	body      []Coordinate
 }
 
+// Globals
+var writer = uilive.New()
+var field = new(Field)
+var snake = new(Snake)
+
 func (f *Field) fillBlocks() {
 	/*
 		-1	=> Wall
@@ -52,7 +57,7 @@ func (f *Field) fillBlocks() {
 		{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 		{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1},
 		{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1},
-		{-1, 0, 0, 1, 0, 0, 0, 2, 0, -1},
+		{-1, 0, 1, 1, 0, 0, 0, 2, 0, -1},
 		{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1},
 		{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1},
 		{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1},
@@ -62,47 +67,76 @@ func (f *Field) fillBlocks() {
 	}
 }
 
-func (f *Field) render(writer *uilive.Writer) {
-	table := tablewriter.NewWriter(writer)
-	table.SetBorder(false)
+func (f *Field) render() {
+	output := ""
 
 	for _, row := range f.blocks {
-		strRow := make([]string, 10)
-		for index, cell := range row {
+		for _, cell := range row {
 			switch cell {
 			case -1:
-				strRow[index] = "❎"
+				output += "❎"
 			case 0:
-				strRow[index] = " "
+				output += "🔳"
 			case 1:
-				strRow[index] = "🔲"
+				output += "🔲"
 			case 2:
-				strRow[index] = "🥚"
+				output += "🥚"
 			default:
-				strRow[index] = " "
+				output += "🔳"
 			}
 		}
-		table.Append(strRow)
+		output += "\n"
 	}
 
-	table.Render()
+	fmt.Fprintln(writer, output)
 }
 
-func makeTurn(field *Field, writer *uilive.Writer) {
-	field.render(writer)
+func makeStep() {
+	moveTail(0, snake.head)
+
+	switch snake.direction {
+	case LEFT:
+		snake.head.x--
+	case UP:
+		snake.head.y--
+	case RIGHT:
+		snake.head.x++
+	case DOWN:
+		snake.head.y++
+	}
+
+	field.blocks[snake.head.y][snake.head.x] = 1
+}
+
+func moveTail(i int, coordinate Coordinate) {
+	if i == len(snake.body)-1 {
+		field.blocks[snake.body[i].y][snake.body[i].x] = 0
+	} else {
+		moveTail(i+1, snake.body[i])
+	}
+	snake.body[i] = coordinate
+}
+
+func makeTurn() {
+	makeStep()
+	field.render()
 	time.Sleep(time.Second)
-	makeTurn(field, writer)
+	makeTurn()
 }
 
 func main() {
-	writer := uilive.New()
 	writer.Start()
 	defer writer.Stop()
 
-	field := new(Field)
 	field.width = 10
 	field.height = 10
 	field.fillBlocks()
 
-	makeTurn(field, writer)
+	snake.direction = RIGHT
+	snake.head.x = 3
+	snake.head.y = 3
+	snake.body = make([]Coordinate, 1, 100)
+	snake.body[0] = Coordinate{2, 3}
+
+	makeTurn()
 }

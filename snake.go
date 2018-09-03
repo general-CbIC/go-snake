@@ -1,15 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"time"
-
-	"github.com/gosuri/uilive"
-	termbox "github.com/nsf/termbox-go"
+	tl "github.com/JoelOtter/termloop"
 )
 
 // Direction is an ENUM for show snake direction
-type Direction int
+type Direction uint8
 
 const (
 	// LEFT is left direction (0)
@@ -22,13 +18,6 @@ const (
 	DOWN Direction = 3
 )
 
-// Field represents width, height and blocks of game field
-type Field struct {
-	width  int
-	height int
-	blocks [][]int8
-}
-
 // Coordinate is {x, y} point struct in game Field
 type Coordinate struct {
 	x int
@@ -37,131 +26,71 @@ type Coordinate struct {
 
 // Snake storages current direction and coordinates of snake.
 type Snake struct {
+	*tl.Entity
 	direction Direction
 	head      Coordinate
 	body      []Coordinate
 }
 
-// Globals
-var writer = uilive.New()
-var field = new(Field)
-var snake = new(Snake)
-
-func (f *Field) fillBlocks() {
-	/*
-		-1	=> Wall
-		0		=> Empty
-		1		=> Snake
-		2		=> Food
-	*/
-	f.blocks = [][]int8{
-		{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-		{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1},
-		{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1},
-		{-1, 0, 1, 1, 0, 0, 0, 2, 0, -1},
-		{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1},
-		{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1},
-		{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1},
-		{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1},
-		{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1},
-		{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-	}
-}
-
-func (f *Field) render() {
-	output := ""
-
-	for _, row := range f.blocks {
-		for _, cell := range row {
-			switch cell {
-			case -1:
-				output += "❎"
-			case 0:
-				output += "🔳"
-			case 1:
-				output += "🔲"
-			case 2:
-				output += "🥚"
-			default:
-				output += "🔳"
+// Tick - method for snake control
+func (snake *Snake) Tick(event tl.Event) {
+	if event.Type == tl.EventKey {
+		switch event.Key {
+		case tl.KeyArrowRight:
+			snake.direction = RIGHT
+		case tl.KeyArrowLeft:
+			snake.direction = LEFT
+		case tl.KeyArrowUp:
+			snake.direction = UP
+		case tl.KeyArrowDown:
+			snake.direction = DOWN
+		case 0:
+			switch event.Ch {
+			case 100:
+				snake.direction = RIGHT
+			case 97:
+				snake.direction = LEFT
+			case 119:
+				snake.direction = UP
+			case 115:
+				snake.direction = DOWN
 			}
 		}
-		output += "\n"
 	}
-
-	fmt.Fprintln(writer, output)
 }
 
-func makeStep() {
-	moveTail(0, snake.head)
-
-	switch snake.direction {
-	case LEFT:
-		snake.head.x--
-	case UP:
-		snake.head.y--
-	case RIGHT:
-		snake.head.x++
-	case DOWN:
-		snake.head.y++
-	}
-
-	field.blocks[snake.head.y][snake.head.x] = 1
-}
-
-func moveTail(i int, coordinate Coordinate) {
-	if i == len(snake.body)-1 {
-		field.blocks[snake.body[i].y][snake.body[i].x] = 0
-	} else {
-		moveTail(i+1, snake.body[i])
-	}
-	snake.body[i] = coordinate
-}
-
-func makeTurn() {
-	makeStep()
-	field.render()
-	time.Sleep(time.Second)
-	makeTurn()
-}
-
-func snakeControl() {
-	event := termbox.PollEvent()
-
-	switch event.Ch {
-	case 97:
-		snake.direction = LEFT
-	case 119:
-		snake.direction = UP
-	case 100:
-		snake.direction = RIGHT
-	case 115:
-		snake.direction = DOWN
-	}
-
-	snakeControl()
+// Draw - updates each frame
+func (snake *Snake) Draw(screen *tl.Screen) {
+	x, y := snake.Position()
+	snake.SetPosition(x+1, y)
 }
 
 func main() {
-	err := termbox.Init()
-	if err != nil {
-		panic(err)
-	}
-	defer termbox.Close()
+	game := tl.NewGame()
+	level := tl.NewBaseLevel(tl.Cell{
+		Bg: tl.ColorBlack,
+		Fg: tl.ColorBlack,
+		Ch: ' ',
+	})
 
-	writer.Start()
-	defer writer.Stop()
+	// Field
+	level.AddEntity(tl.NewRectangle(20, 1, 140, 42, tl.ColorWhite))
 
-	field.width = 10
-	field.height = 10
-	field.fillBlocks()
+	// Walls
+	level.AddEntity(tl.NewRectangle(20, 1, 140, 1, tl.ColorRed))
+	level.AddEntity(tl.NewRectangle(20, 1, 1, 42, tl.ColorRed))
+	level.AddEntity(tl.NewRectangle(160, 1, 1, 42, tl.ColorRed))
+	level.AddEntity(tl.NewRectangle(21, 42, 140, 1, tl.ColorRed))
 
-	snake.direction = RIGHT
-	snake.head.x = 3
-	snake.head.y = 3
-	snake.body = make([]Coordinate, 1, 100)
-	snake.body[0] = Coordinate{2, 3}
+	// Snake
+	snake := Snake{Entity: tl.NewEntity(40, 20, 1, 1)}
+	snake.body = make([]Coordinate, 100)
 
-	go snakeControl()
-	makeTurn()
+	snake.SetCell(0, 0, &tl.Cell{Ch: '🔲'})
+
+	level.AddEntity(snake.Entity)
+
+	game.Screen().SetLevel(level)
+	game.Screen().SetFps(10.0)
+	game.Start()
 }

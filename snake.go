@@ -64,6 +64,8 @@ func (snake *Snake) Tick(event tl.Event) {
 
 // Draw - updates each frame
 func (snake *Snake) Draw(screen *tl.Screen) {
+	snake.moveTail(snake.head)
+
 	switch snake.direction {
 	case RIGHT:
 		snake.head.x++
@@ -76,6 +78,14 @@ func (snake *Snake) Draw(screen *tl.Screen) {
 	}
 
 	screen.RenderCell(snake.head.x, snake.head.y, snakeCell)
+
+	for _, bodyCell := range snake.body {
+		screen.RenderCell(bodyCell.x, bodyCell.y, snakeCell)
+	}
+}
+
+func (snake *Snake) moveTail(coordinate Coordinate) {
+	snake.body = append(snake.body[1:], coordinate)
 }
 
 func main() {
@@ -99,7 +109,12 @@ func main() {
 	snake := new(Snake)
 	snake.Entity = tl.NewEntity(0, 0, 1, 1)
 	snake.head = Coordinate{40, 20}
-	snake.body = make([]Coordinate, 100)
+	snake.body = make([]Coordinate, 4, 100)
+	snake.body[0] = Coordinate{38, 22}
+	snake.body[1] = Coordinate{38, 21}
+	snake.body[2] = Coordinate{38, 20}
+	snake.body[3] = Coordinate{39, 20}
+
 	snake.direction = RIGHT
 
 	snake.SetCell(0, 0, snakeCell)

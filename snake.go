@@ -32,6 +32,9 @@ type Snake struct {
 	body      []Coordinate
 }
 
+// globals
+var snakeCell = &tl.Cell{Ch: '🔲'}
+
 // Tick - method for snake control
 func (snake *Snake) Tick(event tl.Event) {
 	if event.Type == tl.EventKey {
@@ -61,8 +64,18 @@ func (snake *Snake) Tick(event tl.Event) {
 
 // Draw - updates each frame
 func (snake *Snake) Draw(screen *tl.Screen) {
-	x, y := snake.Position()
-	snake.SetPosition(x+1, y)
+	switch snake.direction {
+	case RIGHT:
+		snake.head.x++
+	case LEFT:
+		snake.head.x--
+	case UP:
+		snake.head.y--
+	case DOWN:
+		snake.head.y++
+	}
+
+	screen.RenderCell(snake.head.x, snake.head.y, snakeCell)
 }
 
 func main() {
@@ -83,12 +96,15 @@ func main() {
 	level.AddEntity(tl.NewRectangle(21, 42, 140, 1, tl.ColorRed))
 
 	// Snake
-	snake := Snake{Entity: tl.NewEntity(40, 20, 1, 1)}
+	snake := new(Snake)
+	snake.Entity = tl.NewEntity(0, 0, 1, 1)
+	snake.head = Coordinate{40, 20}
 	snake.body = make([]Coordinate, 100)
+	snake.direction = RIGHT
 
-	snake.SetCell(0, 0, &tl.Cell{Ch: '🔲'})
+	snake.SetCell(0, 0, snakeCell)
 
-	level.AddEntity(snake.Entity)
+	level.AddEntity(snake)
 
 	game.Screen().SetLevel(level)
 	game.Screen().SetFps(10.0)
